@@ -1,52 +1,76 @@
 package deltahacks3.agora;
 
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.AppCompatButton;
-import android.util.AttributeSet;
+import android.support.v4.app.Fragment;
 import android.view.View;
+import android.view.ViewGroup;
+import android.support.annotation.Nullable;
+import android.view.LayoutInflater;
 import android.widget.Toast;
 
 import com.facebook.AccessToken;
+import com.facebook.AccessTokenTracker;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
-import com.facebook.FacebookSdk;
-import com.facebook.AccessTokenTracker;
 import com.facebook.Profile;
 import com.facebook.ProfileTracker;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 
-public class LoginActivity extends AppCompatActivity {
+/**
+ * Created by Vaibhav Ariyur on 2017-01-28.
+ */
+
+public class fbFragment extends Fragment {
     CallbackManager callbackManager;
-    LoginButton fbLoginBtn;
+    LoginButton fb_log_in;
     AccessTokenTracker accessTokenTracker;
     AccessToken accessToken;
     ProfileTracker profileTracker;
     Profile profile;
-    Arrays Arrays;
+    java.util.Arrays Arrays;
 
+    @Nullable
     @Override
-    public View onCreateView(String name, Context context, AttributeSet attrs) {
-        return super.onCreateView(name, context, attrs);
-        LoginButton authButton = (LoginButton)findViewById(R.id.fb_login_button);
-        authButton.setFragment(this);
-        authButton.setReadPermissions(Arrays.asList("public_profile"));
+    public View onCreateView(
+            LayoutInflater inflater,
+            ViewGroup container,
+            Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fb_fragment, container, false);
 
-        return view;
+        fb_log_in = (LoginButton) view.findViewById(R.id.fb_login_button);
+        fb_log_in.setReadPermissions("email");
+        // If using in a fragment
+        fb_log_in.setFragment(this);
+        // Other app specific specialization
+
+        // Callback registration
+        fb_log_in.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                // App code
+            }
+
+            @Override
+            public void onCancel() {
+                // App code
+            }
+
+            @Override
+            public void onError(FacebookException exception) {
+                // App code
+            }
+        });
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         callbackManager = CallbackManager.Factory.create();
-        setContentView(R.layout.activity_login);
         accessTokenTracker = new AccessTokenTracker() {
             @Override
             protected void onCurrentAccessTokenChanged(
@@ -97,7 +121,7 @@ public class LoginActivity extends AppCompatActivity {
                 // App code
             }
 
-    });
+        });
 
     }
     @Override
@@ -112,5 +136,4 @@ public class LoginActivity extends AppCompatActivity {
         profileTracker.stopTracking();
     }
 }
-
-
+}
