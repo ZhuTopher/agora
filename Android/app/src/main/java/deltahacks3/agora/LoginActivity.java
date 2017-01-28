@@ -1,5 +1,6 @@
 package deltahacks3.agora;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatButton;
@@ -14,6 +15,7 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+//        getActionBar().hide(); // getActionBar() returns null
 
         this.fbLoginBtn = (AppCompatButton) findViewById(R.id.fb_login_btn);
         this.fbLoginBtn.setClickable(true);
@@ -21,6 +23,10 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Toast.makeText(getApplicationContext(), "Clicked FB button", Toast.LENGTH_SHORT).show();
+
+                // Start the MapsActivity
+                Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
+                startActivity(intent);
             }
         });
     }

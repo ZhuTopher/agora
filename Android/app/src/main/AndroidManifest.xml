@@ -10,14 +10,20 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
+        android:label="Agora"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:supportsRtl="true"
-        android:theme="@style/LoginTheme">
+        android:supportsRtl="true">
 
         <activity
             android:name=".LoginActivity"
             android:theme="@style/LoginTheme">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
 
         </activity>
 
@@ -37,12 +43,6 @@
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps"
             android:theme="@style/MainTheme">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
     </application>
 
