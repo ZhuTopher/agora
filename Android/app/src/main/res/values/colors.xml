@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryTrans">#333F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#303F9F</color>
+    <color name="colorComplementary">#8cb53f</color>
+    <color name="colorComplementaryTrans">#338cb53f</color>
 
     <color name="facebookBlue">#3b5998</color>
     <color name="chat_bar_bg">#707b7c</color>

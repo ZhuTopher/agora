@@ -43,6 +43,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import static android.R.attr.id;
 import static android.R.id.list;
@@ -74,13 +75,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setContentView(R.layout.activity_maps);
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(map);
-        mapFragment.getMapAsync(this);
+        if (googleServivcesAvailable()) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        } else {
+            Toast.makeText(this, "Google service not present", Toast.LENGTH_LONG).show();
+        }
     }
 
-    public boolean googleServicesAvailable() {
+    public boolean googleServivcesAvailable() {
         GoogleApiAvailability api = GoogleApiAvailability.getInstance();
         int isAvailable = api.isGooglePlayServicesAvailable(getApplicationContext());
         if (isAvailable == ConnectionResult.SUCCESS) {
@@ -126,21 +128,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-            }else{
-                new AlertDialog.Builder(getApplicationContext())
-                        .setTitle("Error")
-                        .setMessage("This app requires the Location permission.")
-                        .setNeutralButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                finish();
-                            }
-                        })
-                        .setIcon(android.R.drawable.ic_dialog_alert)
-                        .setCancelable(false)
-                        .show();
+                }else{
+                    new AlertDialog.Builder(getApplicationContext())
+                            .setTitle("Error")
+                            .setMessage("This app requires the Location permission.")
+                            .setNeutralButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    finish();
+                                }
+                            })
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .setCancelable(false)
+                            .show();
 
 
-            }
+                }
         }
 
     }
@@ -155,11 +157,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 latitude = mLastLocation.getLatitude();
                 longitude = mLastLocation.getLongitude();
 
-                goToLocationZoom(latitude,longitude,15);
+
+                // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+                SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                        .findFragmentById(map);
+                mapFragment.getMapAsync(this);
             }
         }
 
     }
+
+    private boolean isPointInPolygon(LatLng tap, List<LatLng> vertices) {
+        //See http://stackoverflow.com/questions/26014312/identify-if-point-is-in-the-polygon
+        int intersectCount = 0;
+        for (int j = 0; j < vertices.size() - 1; j++) {
+            if (rayCastIntersect(tap, vertices.get(j), vertices.get(j + 1))) {
+                intersectCount++;
+            }
+        }
+
+        return ((intersectCount % 2) == 1); // odd = inside, even = outside;
+    }
+
+    private boolean rayCastIntersect(LatLng tap, LatLng vertA, LatLng vertB) {
+        //See http://stackoverflow.com/questions/26014312/identify-if-point-is-in-the-polygon
+        //Ray-casting algorithm..? Perhaps a bit verbose, but alas.
+
+        double aY = vertA.latitude;
+        double bY = vertB.latitude;
+        double aX = vertA.longitude;
+        double bX = vertB.longitude;
+        double pY = tap.latitude;
+        double pX = tap.longitude;
+
+        if ((aY > pY && bY > pY) || (aY < pY && bY < pY)
+                || (aX < pX && bX < pX)) {
+            return false; // a and b can't both be above or below pt.y, and a or
+            // b must be east of pt.x
+        }
+
+        double m = (aY - bY) / (aX - bX); // Rise over run
+        double bee = (-aX) * m + aY; // y = mx + b
+        double x = (pY - bee) / m; // algebra is neat!
+
+        return x > pX;
+    }
+
 
     public void drawCensus(GoogleMap mGoogleMap)
     {
@@ -176,17 +219,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 String[] srcArr = line.split(",");
                 String idName = srcArr[0];
 
-                int lineCol = Color.argb(255, 0, 0, 100); //Set to some color declared w/in Android?
-                int fillCol = Color.argb(125, 0, 0, 100); //As above? Incl. Transparency?
                 PolygonOptions polyOpt = new PolygonOptions()
-                        .strokeColor(lineCol)
-                        .fillColor(fillCol)
+                        .strokeColor(ContextCompat.getColor(getApplicationContext(),R.color.colorAccent))
+                        .fillColor(ContextCompat.getColor(getApplicationContext(),R.color.colorPrimaryTrans))
                         .clickable(true);
 
                 for (int i = 1; i < srcArr.length; i += 2) {
                     polyOpt.add(new LatLng(Double.parseDouble(srcArr[i]), Double.parseDouble(srcArr[i + 1])));
                 }
+
+                if(isPointInPolygon(new LatLng(latitude,longitude),polyOpt.getPoints()))
+                {
+                    polyOpt.fillColor(ContextCompat.getColor(getApplicationContext(),R.color.colorComplementaryTrans));
+                }
+
                 Polygon polygon = mGoogleMap.addPolygon(polyOpt);
+
                 polygonWrapperList.add(new PolygonWrapper(idName, polygon));
             }
             br.close();
@@ -257,17 +305,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app.
      */
 
+    public void addLocMarker(GoogleMap mGoogleMap)
+    {
+        mGoogleMap.addMarker(new MarkerOptions()
+                .position(new LatLng(latitude,longitude))
+        );
+    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mGoogleMap=googleMap;
+        mGoogleMap= googleMap;
+        goToLocationZoom(latitude,longitude,15);
         drawCensus(mGoogleMap);
+        addLocMarker(mGoogleMap);
 
-        if (googleServicesAvailable()) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-        } else {
-            Toast.makeText(this, "Google service not present", Toast.LENGTH_LONG).show();
-        }
     }
     private void goToLocationZoom(double lat,double lng, int zoom){
         LatLng ll = new LatLng(lat,lng);
