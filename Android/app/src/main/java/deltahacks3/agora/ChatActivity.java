@@ -20,26 +20,35 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class ChatActivity extends AppCompatActivity {
+    public static final String ROOM_ID_KEY = "room_id_key";
 
-    RecyclerView chatRecyclerView;
-    ChatAdapter chatAdapter;
-    EditText chatEditText;
+    private String roomId;
+
+    private RecyclerView chatRecyclerView;
+    private ChatAdapter chatAdapter;
+    private EditText chatEditText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
+        this.roomId = getIntent().getStringExtra(ROOM_ID_KEY);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Sector: " + this.roomId);
+        }
+
         // Set-up chat recycler view
         this.chatRecyclerView = (RecyclerView) findViewById(R.id.chat_recycler_view);
         this.chatRecyclerView.setHasFixedSize(true);
-        this.chatRecyclerView.setOnTouchListener(new View.OnTouchListener() {
+        // TODO: currently will kill scrolling by consuming touch events, use dispatch
+        /*this.chatRecyclerView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 hideSoftKeyboard(); // if chat is pressed, hide keyboard
                 return true;
             }
-        });
+        });*/
 
         LinearLayoutManager llm = new LinearLayoutManager(getApplicationContext());
         llm.setOrientation(LinearLayoutManager.VERTICAL);
@@ -56,22 +65,6 @@ public class ChatActivity extends AppCompatActivity {
         this.chatEditText.setClickable(true);
         this.chatEditText.setRawInputType(InputType.TYPE_CLASS_TEXT);
         this.chatEditText.setImeOptions(EditorInfo.IME_ACTION_GO);
-//        this.chatEditText.setClickable(true);
-//        this.chatEditText.setImeActionLabel("Send", KeyEvent.KEYCODE_ENTER);
-        /*this.chatEditText.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
-                // If the event is a key-down event on the "enter" button
-                if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
-                        (keyCode == KeyEvent.KEYCODE_ENTER)) {
-                    sendChatMessage(chatEditText.getText().toString());
-                    return true;
-                }
-
-                return false;
-            }
-        });*/
-
         this.chatEditText.setOnEditorActionListener(new EditText.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {

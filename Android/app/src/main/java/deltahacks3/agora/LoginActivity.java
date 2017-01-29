@@ -19,7 +19,9 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-//        getActionBar().hide(); // getActionBar() returns null
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
 
         this.fbLoginBtn = (AppCompatButton) findViewById(R.id.fb_login_btn);
         this.fbLoginBtn.setClickable(true);

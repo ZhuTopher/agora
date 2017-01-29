@@ -6,6 +6,7 @@ import android.Manifest;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Color;
@@ -73,14 +74,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setContentView(R.layout.activity_maps);
 
-        if (googleServivcesAvailable()) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-        } else {
-            Toast.makeText(this, "Google service not present", Toast.LENGTH_LONG).show();
-        }
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(map);
+        mapFragment.getMapAsync(this);
     }
 
-    public boolean googleServivcesAvailable() {
+    public boolean googleServicesAvailable() {
         GoogleApiAvailability api = GoogleApiAvailability.getInstance();
         int isAvailable = api.isGooglePlayServicesAvailable(getApplicationContext());
         if (isAvailable == ConnectionResult.SUCCESS) {
@@ -155,11 +155,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 latitude = mLastLocation.getLatitude();
                 longitude = mLastLocation.getLongitude();
 
-
-                // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-                SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                        .findFragmentById(map);
-                mapFragment.getMapAsync(this);
+                goToLocationZoom(latitude,longitude,15);
             }
         }
 
@@ -210,14 +206,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onPolygonClick(Polygon polygon) {
                 PolygonWrapper wrapper = getPolyWrapperForPoly(polygon);
                 if (wrapper != null) {
-                    Toast.makeText(getApplicationContext(),wrapper.id,Toast.LENGTH_SHORT).show();
-
+                    Intent intent = new Intent(MapsActivity.this, ChatActivity.class);
+                    intent.putExtra(ChatActivity.ROOM_ID_KEY, wrapper.id);
+                    startActivity(intent);
                 }
-                /*
-                System.out.println("I think you clicked a polygon :D");
-                String textToPrint = "You clicked a polygon: "+polygon.getZIndex();
-                Toast toast = Toast.makeText(getApplicationContext(),textToPrint,Toast.LENGTH_SHORT);
-                toast.show();*/
             }
         });
     }
@@ -268,10 +260,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mGoogleMap= googleMap;
-        goToLocationZoom(latitude,longitude,15);
+        mGoogleMap=googleMap;
         drawCensus(mGoogleMap);
 
+        if (googleServicesAvailable()) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        } else {
+            Toast.makeText(this, "Google service not present", Toast.LENGTH_LONG).show();
+        }
     }
     private void goToLocationZoom(double lat,double lng, int zoom){
         LatLng ll = new LatLng(lat,lng);
