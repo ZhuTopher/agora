@@ -42,6 +42,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import static android.R.attr.id;
 import static android.R.id.list;
@@ -165,6 +166,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    private boolean isPointInPolygon(LatLng tap, List<LatLng> vertices) {
+        //See http://stackoverflow.com/questions/26014312/identify-if-point-is-in-the-polygon
+        int intersectCount = 0;
+        for (int j = 0; j < vertices.size() - 1; j++) {
+            if (rayCastIntersect(tap, vertices.get(j), vertices.get(j + 1))) {
+                intersectCount++;
+            }
+        }
+
+        return ((intersectCount % 2) == 1); // odd = inside, even = outside;
+    }
+
+    private boolean rayCastIntersect(LatLng tap, LatLng vertA, LatLng vertB) {
+        //See http://stackoverflow.com/questions/26014312/identify-if-point-is-in-the-polygon
+        //Ray-casting algorithm..? Perhaps a bit verbose, but alas.
+
+        double aY = vertA.latitude;
+        double bY = vertB.latitude;
+        double aX = vertA.longitude;
+        double bX = vertB.longitude;
+        double pY = tap.latitude;
+        double pX = tap.longitude;
+
+        if ((aY > pY && bY > pY) || (aY < pY && bY < pY)
+                || (aX < pX && bX < pX)) {
+            return false; // a and b can't both be above or below pt.y, and a or
+            // b must be east of pt.x
+        }
+
+        double m = (aY - bY) / (aX - bX); // Rise over run
+        double bee = (-aX) * m + aY; // y = mx + b
+        double x = (pY - bee) / m; // algebra is neat!
+
+        return x > pX;
+    }
+
+
     public void drawCensus(GoogleMap mGoogleMap)
     {
         this.polygonWrapperList = new ArrayList<PolygonWrapper>();
@@ -180,17 +218,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 String[] srcArr = line.split(",");
                 String idName = srcArr[0];
 
-                int lineCol = Color.argb(255, 0, 0, 100); //Set to some color declared w/in Android?
-                int fillCol = Color.argb(125, 0, 0, 100); //As above? Incl. Transparency?
                 PolygonOptions polyOpt = new PolygonOptions()
-                        .strokeColor(lineCol)
-                        .fillColor(fillCol)
+                        .strokeColor(ContextCompat.getColor(getApplicationContext(),R.color.colorAccent))
+                        .fillColor(ContextCompat.getColor(getApplicationContext(),R.color.colorPrimaryTrans))
                         .clickable(true);
 
                 for (int i = 1; i < srcArr.length; i += 2) {
                     polyOpt.add(new LatLng(Double.parseDouble(srcArr[i]), Double.parseDouble(srcArr[i + 1])));
                 }
+
+                if(isPointInPolygon(new LatLng(latitude,longitude),polyOpt.getPoints()))
+                {
+                    polyOpt.fillColor(ContextCompat.getColor(getApplicationContext(),R.color.colorComplementaryTrans));
+                }
+
                 Polygon polygon = mGoogleMap.addPolygon(polyOpt);
+
                 polygonWrapperList.add(new PolygonWrapper(idName, polygon));
             }
             br.close();
@@ -210,8 +253,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onPolygonClick(Polygon polygon) {
                 PolygonWrapper wrapper = getPolyWrapperForPoly(polygon);
                 if (wrapper != null) {
-                    Toast.makeText(getApplicationContext(),wrapper.id,Toast.LENGTH_SHORT).show();
-
+                    Toast toast = Toast.makeText(getApplicationContext(),wrapper.id,Toast.LENGTH_SHORT);
+                    //Toast toast = Toast.makeText(getApplicationContext(),""+isPointInPolygon(new LatLng(latitude,longitude),polygon.getPoints()),Toast.LENGTH_SHORT);
+                    toast.show();
                 }
                 /*
                 System.out.println("I think you clicked a polygon :D");
@@ -265,12 +309,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app.
      */
 
+    public void addLocMarker(GoogleMap mGoogleMap)
+    {
+        mGoogleMap.addMarker(new MarkerOptions()
+            .position(new LatLng(latitude,longitude))
+        );
+    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mGoogleMap= googleMap;
         goToLocationZoom(latitude,longitude,15);
         drawCensus(mGoogleMap);
+        addLocMarker(mGoogleMap);
 
     }
     private void goToLocationZoom(double lat,double lng, int zoom){
