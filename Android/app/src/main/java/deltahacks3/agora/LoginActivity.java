@@ -32,7 +32,7 @@ public class LoginActivity extends AppCompatActivity {
                 cache.edit().putString(LoginActivity.USERNAME_KEY, "USERNAME HERE").commit();
 
                 // Start the MapsActivity
-                Intent intent = new Intent(getApplicationContext(), ChatActivity.class);
+                Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
                 startActivity(intent);
             }
         });

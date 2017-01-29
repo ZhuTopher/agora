@@ -7,6 +7,8 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.graphics.Color;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
@@ -21,6 +23,11 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.widget.Toast;
 
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -33,6 +40,12 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
+
+import static android.R.attr.id;
+import static android.R.id.list;
+import static deltahacks3.agora.R.id.map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
@@ -41,6 +54,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     GoogleApiClient mGoogleApiClient;
     double longitude;
     double latitude;
+
+    private class PolygonWrapper {
+        String id;
+        Polygon polygon;
+
+        private PolygonWrapper(String id, Polygon polygon) {
+            this.id = id;
+            this.polygon = polygon;
+        };
+    }
+    List<PolygonWrapper> polygonWrapperList;
 
 
     @Override
@@ -131,13 +155,81 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 latitude = mLastLocation.getLatitude();
                 longitude = mLastLocation.getLongitude();
 
+
                 // Obtain the SupportMapFragment and get notified when the map is ready to be used.
                 SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                        .findFragmentById(R.id.map);
+                        .findFragmentById(map);
                 mapFragment.getMapAsync(this);
             }
         }
 
+    }
+
+    public void drawCensus(GoogleMap mGoogleMap)
+    {
+        this.polygonWrapperList = new ArrayList<PolygonWrapper>();
+
+        try {
+
+            InputStream is = getAssets().open("workfile.txt");
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] srcArr = line.split(",");
+                String idName = srcArr[0];
+
+                int lineCol = Color.argb(255, 0, 0, 100); //Set to some color declared w/in Android?
+                int fillCol = Color.argb(125, 0, 0, 100); //As above? Incl. Transparency?
+                PolygonOptions polyOpt = new PolygonOptions()
+                        .strokeColor(lineCol)
+                        .fillColor(fillCol)
+                        .clickable(true);
+
+                for (int i = 1; i < srcArr.length; i += 2) {
+                    polyOpt.add(new LatLng(Double.parseDouble(srcArr[i]), Double.parseDouble(srcArr[i + 1])));
+                }
+                Polygon polygon = mGoogleMap.addPolygon(polyOpt);
+                polygonWrapperList.add(new PolygonWrapper(idName, polygon));
+            }
+            br.close();
+        }
+        catch(FileNotFoundException e)
+        {
+            System.out.println(e.getLocalizedMessage());
+            System.out.println(e.toString());
+            e.printStackTrace(System.out);
+        }
+        catch(IOException e)
+        {
+            System.out.println(e.getMessage());
+        }
+        mGoogleMap.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
+            @Override
+            public void onPolygonClick(Polygon polygon) {
+                PolygonWrapper wrapper = getPolyWrapperForPoly(polygon);
+                if (wrapper != null) {
+                    Toast.makeText(getApplicationContext(),wrapper.id,Toast.LENGTH_SHORT).show();
+
+                }
+                /*
+                System.out.println("I think you clicked a polygon :D");
+                String textToPrint = "You clicked a polygon: "+polygon.getZIndex();
+                Toast toast = Toast.makeText(getApplicationContext(),textToPrint,Toast.LENGTH_SHORT);
+                toast.show();*/
+            }
+        });
+    }
+
+    private PolygonWrapper getPolyWrapperForPoly(Polygon polygon) {
+        for (PolygonWrapper wrapper : this.polygonWrapperList) {
+            if (wrapper.polygon.equals(polygon)) {
+                return wrapper;
+            } // else move on
+        }
+
+        return null; // default false value is null
     }
 
     @Override
@@ -178,7 +270,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mGoogleMap= googleMap;
         goToLocationZoom(latitude,longitude,15);
-
+        drawCensus(mGoogleMap);
 
     }
     private void goToLocationZoom(double lat,double lng, int zoom){
