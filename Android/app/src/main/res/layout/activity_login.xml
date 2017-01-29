@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent">
+
+	<ImageView
+		android:layout_width="wrap_content"
+		android:layout_height="150dp"
+		android:layout_gravity="center_horizontal"
+		android:layout_margin="20dp"
+		android:scaleType="centerInside"
+		android:src="@drawable/agora_banner"/>
+
+	<android.support.v7.widget.AppCompatButton
+		android:id="@+id/fb_login_btn"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="center_horizontal"
+		android:text="Login with Facebook"
+		android:textColor="@android:color/white"
+		android:textSize="16sp"
+		android:padding="5dp"
+		android:background="@color/facebookBlue"/>
+
+</LinearLayout>

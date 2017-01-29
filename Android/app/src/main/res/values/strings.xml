@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Agora</string>
     <string name="title_activity_maps">Map</string>
+
+    <string name="chat_hint">Chat</string>
+    <string name="chat_disabled">DISABLED</string>
 </resources>

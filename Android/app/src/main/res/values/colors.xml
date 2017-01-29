@@ -2,5 +2,10 @@
 <resources>
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
+    <color name="colorAccent">#303F9F</color>
+
+    <color name="facebookBlue">#3b5998</color>
+    <color name="chat_bar_bg">#707b7c</color>
+    <color name="chat_font_color">#f8f9f9</color>
+    <color name="chat_hint_color">#bdc3c7</color>
 </resources>
