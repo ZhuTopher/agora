@@ -56,7 +56,6 @@
 
         <activity
             android:name=".LoginActivity"
-            android:noHistory="true"
             android:theme="@style/MainTheme">
             <!--android:theme="@style/LoginTheme">-->
 

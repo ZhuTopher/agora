@@ -13,10 +13,6 @@
 		android:scaleType="centerInside"
 		android:src="@drawable/agora_banner"/>
 
-<<<<<<< HEAD
-	<android.support.v7.widget.AppCompatButton
-		android:id="@+id/fb_login_btn"
-=======
 	<!--<FrameLayout
 		android:id="@+id/fb_frag_container"
 		android:layout_weight="1"
@@ -27,14 +23,10 @@
 
 	<com.facebook.login.widget.LoginButton
 		android:id="@+id/fb_login_button"
->>>>>>> 162d9c7... Finish rough Facebook login implementationC
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_gravity="center_horizontal"
-		android:text="Login with Facebook"
-		android:textColor="@android:color/white"
-		android:textSize="16sp"
-		android:padding="5dp"
-		android:background="@color/facebookBlue"/>
+		android:layout_marginTop="30dp"
+		android:layout_marginBottom="30dp" />
 
 </LinearLayout>

@@ -14,12 +14,14 @@ import com.facebook.FacebookException;
 import com.facebook.AccessTokenTracker;
 import com.facebook.Profile;
 import com.facebook.ProfileTracker;
+import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 
 public class LoginActivity extends AppCompatActivity {
 
     public static final String USERNAME_KEY = "fb_username";
+    public static final String PROFILE_PIC_KEY = "fb_profile_pic";
 
     private String username;
     private Uri profileUri;
@@ -40,6 +42,13 @@ public class LoginActivity extends AppCompatActivity {
         AppEventsLogger.activateApp(this);*/
         setContentView(R.layout.activity_login);
 
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
+        LoginManager.getInstance().logOut();
+        // accessToken = AccessToken.getCurrentAccessToken();
+
         /*accessTokenTracker = new AccessTokenTracker() {
             @Override
             protected void onCurrentAccessTokenChanged(AccessToken oldAccessToken,
@@ -51,11 +60,14 @@ public class LoginActivity extends AppCompatActivity {
         profileTracker = new ProfileTracker() {
             @Override
             protected void onCurrentProfileChanged(Profile oldProfile, Profile currentProfile) {
-                username = currentProfile.getFirstName();
-//              TODO:  profileUri = currentProfile.getProfilePictureUri(..);
+                if (currentProfile != null) {
+                    username = currentProfile.getFirstName();
+                    profileUri = currentProfile.getProfilePictureUri(100, 100);
 
-                SharedPreferences cache = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                cache.edit().putString(LoginActivity.USERNAME_KEY, username).commit();
+                    SharedPreferences cache = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                    cache.edit().putString(LoginActivity.USERNAME_KEY, username).commit();
+                    // cache.edit().putString(LoginActivity.PROFILE_PIC_KEY, profileUri.toString()).commit();
+                }
             }
         };
 
@@ -74,6 +86,7 @@ public class LoginActivity extends AppCompatActivity {
 
                 // Start the MapsActivity
                 Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
             }
 
@@ -89,8 +102,6 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(LoginActivity.this, "FB Login error", Toast.LENGTH_SHORT).show();
             }
         });
-
-        // accessToken = AccessToken.getCurrentAccessToken();
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
