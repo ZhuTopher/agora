@@ -31,12 +31,14 @@
     <application
         android:label="Agora"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/delta_launcher"
         android:supportsRtl="true">
 
         <activity
             android:name=".LoginActivity"
-            android:theme="@style/LoginTheme">
+            android:noHistory="true"
+            android:theme="@style/MainTheme">
+            <!--android:theme="@style/LoginTheme">-->
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

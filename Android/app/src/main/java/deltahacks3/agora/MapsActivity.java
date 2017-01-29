@@ -6,7 +6,10 @@ import android.Manifest;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.graphics.Color;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
@@ -21,6 +24,11 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.widget.Toast;
 
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -33,6 +41,12 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
+
+import static android.R.attr.id;
+import static android.R.id.list;
+import static deltahacks3.agora.R.id.map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
@@ -42,6 +56,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     double longitude;
     double latitude;
 
+    private class PolygonWrapper {
+        String id;
+        Polygon polygon;
+
+        private PolygonWrapper(String id, Polygon polygon) {
+            this.id = id;
+            this.polygon = polygon;
+        };
+    }
+    List<PolygonWrapper> polygonWrapperList;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,14 +74,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setContentView(R.layout.activity_maps);
 
-        if (googleServivcesAvailable()) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-        } else {
-            Toast.makeText(this, "Google service not present", Toast.LENGTH_LONG).show();
-        }
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(map);
+        mapFragment.getMapAsync(this);
     }
 
-    public boolean googleServivcesAvailable() {
+    public boolean googleServicesAvailable() {
         GoogleApiAvailability api = GoogleApiAvailability.getInstance();
         int isAvailable = api.isGooglePlayServicesAvailable(getApplicationContext());
         if (isAvailable == ConnectionResult.SUCCESS) {
@@ -131,13 +155,73 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 latitude = mLastLocation.getLatitude();
                 longitude = mLastLocation.getLongitude();
 
-                // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-                SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                        .findFragmentById(R.id.map);
-                mapFragment.getMapAsync(this);
+                goToLocationZoom(latitude,longitude,15);
             }
         }
 
+    }
+
+    public void drawCensus(GoogleMap mGoogleMap)
+    {
+        this.polygonWrapperList = new ArrayList<PolygonWrapper>();
+
+        try {
+
+            InputStream is = getAssets().open("workfile.txt");
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] srcArr = line.split(",");
+                String idName = srcArr[0];
+
+                int lineCol = Color.argb(255, 0, 0, 100); //Set to some color declared w/in Android?
+                int fillCol = Color.argb(125, 0, 0, 100); //As above? Incl. Transparency?
+                PolygonOptions polyOpt = new PolygonOptions()
+                        .strokeColor(lineCol)
+                        .fillColor(fillCol)
+                        .clickable(true);
+
+                for (int i = 1; i < srcArr.length; i += 2) {
+                    polyOpt.add(new LatLng(Double.parseDouble(srcArr[i]), Double.parseDouble(srcArr[i + 1])));
+                }
+                Polygon polygon = mGoogleMap.addPolygon(polyOpt);
+                polygonWrapperList.add(new PolygonWrapper(idName, polygon));
+            }
+            br.close();
+        }
+        catch(FileNotFoundException e)
+        {
+            System.out.println(e.getLocalizedMessage());
+            System.out.println(e.toString());
+            e.printStackTrace(System.out);
+        }
+        catch(IOException e)
+        {
+            System.out.println(e.getMessage());
+        }
+        mGoogleMap.setOnPolygonClickListener(new GoogleMap.OnPolygonClickListener() {
+            @Override
+            public void onPolygonClick(Polygon polygon) {
+                PolygonWrapper wrapper = getPolyWrapperForPoly(polygon);
+                if (wrapper != null) {
+                    Intent intent = new Intent(MapsActivity.this, ChatActivity.class);
+                    intent.putExtra(ChatActivity.ROOM_ID_KEY, wrapper.id);
+                    startActivity(intent);
+                }
+            }
+        });
+    }
+
+    private PolygonWrapper getPolyWrapperForPoly(Polygon polygon) {
+        for (PolygonWrapper wrapper : this.polygonWrapperList) {
+            if (wrapper.polygon.equals(polygon)) {
+                return wrapper;
+            } // else move on
+        }
+
+        return null; // default false value is null
     }
 
     @Override
@@ -176,10 +260,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mGoogleMap= googleMap;
-        goToLocationZoom(latitude,longitude,15);
+        mGoogleMap=googleMap;
+        drawCensus(mGoogleMap);
 
-
+        if (googleServicesAvailable()) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        } else {
+            Toast.makeText(this, "Google service not present", Toast.LENGTH_LONG).show();
+        }
     }
     private void goToLocationZoom(double lat,double lng, int zoom){
         LatLng ll = new LatLng(lat,lng);

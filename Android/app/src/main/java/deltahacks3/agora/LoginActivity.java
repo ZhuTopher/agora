@@ -19,7 +19,9 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-//        getActionBar().hide(); // getActionBar() returns null
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
 
         this.fbLoginBtn = (AppCompatButton) findViewById(R.id.fb_login_btn);
         this.fbLoginBtn.setClickable(true);
@@ -32,7 +34,7 @@ public class LoginActivity extends AppCompatActivity {
                 cache.edit().putString(LoginActivity.USERNAME_KEY, "USERNAME HERE").commit();
 
                 // Start the MapsActivity
-                Intent intent = new Intent(getApplicationContext(), ChatActivity.class);
+                Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
                 startActivity(intent);
             }
         });
