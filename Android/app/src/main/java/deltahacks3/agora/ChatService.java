@@ -40,7 +40,7 @@ public class ChatService extends Service {
         this.roomId = intent.getStringExtra(ChatActivity.ROOM_ID_KEY);
         EventBus.getDefault().register(ChatService.this);
 
-//        connectToServer();
+        connectToServer();
 
         return Service.START_REDELIVER_INTENT;
     }
@@ -52,51 +52,62 @@ public class ChatService extends Service {
     }
 
     private void connectToServer() {
-        try {
-            this.UDPsocket = new DatagramSocket(SERVER_PORT, InetAddress.getByName(SERVER_IPv6_ADDR));
-
             this.UDPHandlerThread = new HandlerThread("UDP Thread");
             this.UDPHandlerThread.start();
             this.UDPHandler = new Handler(this.UDPHandlerThread.getLooper());
             this.UDPHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    byte[] buffer = new byte[65536];
-                    DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
-
                     try {
+                        UDPsocket = new DatagramSocket(SERVER_PORT, InetAddress.getByName(SERVER_IPv6_ADDR));
+                        byte[] buffer = new byte[8192];
+                        DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
+
                         while(!UDPsocket.isClosed()) {
                             UDPsocket.receive(incoming);
                             byte[] data = incoming.getData();
 
-                            String jsonStr = new String(data, 0, incoming.getLength());
+                            /*String jsonStr = new String(data, 0, incoming.getLength());
                             JSONObject jsonObj = new JSONObject(jsonStr);
 
                             ChatMessage chatMsg = new ChatMessage(
-                                    jsonObj.getString("username"), jsonObj.getString("message"));
-                            EventBus.getDefault().post(new ChatActivity.EventReceiveMessage(chatMsg));
+                                    jsonObj.getString("username"), jsonObj.getString("message"));*/
+
+                            String msg = new String(data);
+                            EventBus.getDefault().post(new ChatActivity.EventReceiveMessage(
+                                    new ChatMessage("SERVER?", msg)));
                         }
-                    } catch (JSONException j) {
-                        Log.e(LOG_TAG, "JSONException " + j);
+                    /*} catch (JSONException j) {
+                        Log.e(LOG_TAG, "JSONException " + j);*/
+
+                    } catch (UnknownHostException u) {
+                        Log.e(LOG_TAG, "Failed to resolve host for " + SERVER_IPv6_ADDR);
                     } catch(IOException e) {
-                        Log.e(LOG_TAG, "IOException " + e);
+                        Log.e(LOG_TAG, "Failed to open socket to ip: " + e.getMessage());
                     }
                 }
             });
-
-        } catch (UnknownHostException u) {
-            Log.e(LOG_TAG, "Failed to resolve host for " + SERVER_IPv6_ADDR);
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "Failed to open socket to ip: " + e.getMessage());
-        }
     }
 
     // TODO: make this an HTML post
-    @Subscribe(threadMode = ThreadMode.MAIN)
+    @Subscribe(threadMode = ThreadMode.ASYNC)
     public void onEventMainThread(ChatActivity.EventSendMessage sendMessage) {
         // Client just sent a message
         // TODO: temp for debug
-        EventBus.getDefault().post(new ChatActivity.EventReceiveMessage(sendMessage.chatMsg));
+        // EventBus.getDefault().post(new ChatActivity.EventReceiveMessage(sendMessage.chatMsg));
+            try {
+                if (this.UDPsocket == null) {
+                    this.UDPsocket = new DatagramSocket(SERVER_PORT, InetAddress.getByName(SERVER_IPv6_ADDR));
+                }
+                byte[] bytes = sendMessage.chatMsg.msg.getBytes();
+                DatagramPacket packet = new DatagramPacket(bytes, bytes.length,
+                        InetAddress.getByName(SERVER_IPv6_ADDR), SERVER_PORT);
+                this.UDPsocket.send(packet);
+            } catch (UnknownHostException u) {
+                Log.e(LOG_TAG, "Failed to resolve host for " + SERVER_IPv6_ADDR);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "r.i.p");
+            }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
