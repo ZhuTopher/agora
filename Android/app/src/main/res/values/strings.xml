@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">Agora</string>
     <string name="title_activity_maps">Map</string>
+
     <string name="app_id">593078250893638</string>
+    <string name="facebook_app_id">1436830846329735</string>
+    <string name="fb_login_protocol_scheme">fb1436830846329735</string>
+
 </resources>
