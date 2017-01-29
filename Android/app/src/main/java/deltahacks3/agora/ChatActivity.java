@@ -2,6 +2,7 @@ package deltahacks3.agora;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -16,8 +17,30 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 public class ChatActivity extends AppCompatActivity {
     public static final String ROOM_ID_KEY = "room_id_key";
+
+    public static class EventSendMessage {
+        public String roomId;
+        public ChatMessage chatMsg;
+        public EventSendMessage(String roomId, ChatMessage chatMsg) {
+            this.roomId = roomId;
+            this.chatMsg = chatMsg;
+        }
+    }
+
+    public static class EventReceiveMessage {
+        public ChatMessage chatMsg;
+        public EventReceiveMessage(ChatMessage chatMsg) {
+            this.chatMsg = chatMsg;
+        }
+    }
+
+    public static class CloseConnection{}
 
     private String roomId;
 
@@ -31,6 +54,7 @@ public class ChatActivity extends AppCompatActivity {
         setContentView(R.layout.activity_chat);
 
         this.roomId = getIntent().getStringExtra(ROOM_ID_KEY);
+
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Sector: " + this.roomId);
         }
@@ -76,18 +100,33 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        EventBus.getDefault().register(ChatActivity.this);
+        startChatService();
+    }
+
+    @Override
+    public void onPause() {
+        super.onStop();
+        EventBus.getDefault().unregister(ChatActivity.this);
+        EventBus.getDefault().post(new CloseConnection());
+        stopService(new Intent(this, ChatService.class));
+    }
+
     private void sendChatMessage(String msg) {
         SharedPreferences cache = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String username = cache.getString(LoginActivity.USERNAME_KEY, "");
 
         if (username.equals("")) {
-            rejectedChatMessage();
             this.chatEditText.setClickable(false);
             this.chatEditText.setText(R.string.chat_disabled);
+            rejectedChatMessage();
         } else if (!msg.equals("")) {
-            displayChatMessage(new ChatMessage(username, msg)); // TODO: username
+            EventBus.getDefault().post(new EventSendMessage(roomId, new ChatMessage(username, msg)));
             this.chatEditText.setText(""); // clear the text when sent
-        } // else, msg is empty string, so do nothinig
+        } // else, msg is empty string, so do nothing
 
         hideSoftKeyboard();
     }
@@ -115,5 +154,16 @@ public class ChatActivity extends AppCompatActivity {
     private void displayChatMessage(ChatMessage chatMsg) {
         this.chatAdapter.addNewMessage(chatMsg);
         this.chatRecyclerView.scrollToPosition(this.chatAdapter.getItemCount()-1);
+    }
+
+    private void startChatService() {
+        Intent intent = new Intent(this, ChatService.class);
+        intent.putExtra(ROOM_ID_KEY, this.roomId);
+        startService(intent);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onEventMainThread(ChatActivity.EventReceiveMessage receivedMessage) {
+        displayChatMessage(receivedMessage.chatMsg);
     }
 }
