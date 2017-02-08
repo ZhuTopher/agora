@@ -1,9 +1,11 @@
 package main
 
  import (
-  "fmt"
-  "log"
-  "net"
+	"errors"
+	"fmt"
+	"log"
+	"net"
+	"os"
  )
 
  func handleUDPConnection(conn *net.UDPConn) {
@@ -35,8 +37,21 @@ package main
 
  }
 
+ // Return the deployed service application's PUBLIC_IP
+func PublicIP() (string, error) {
+	host := os.Getenv("PUBLIC_IP")
+	if host == "" {
+		return "", errors.New("Missing/empty public ip")
+	}
+	return host, nil
+}
+
  func main() {
-         hostName := "localhost" // [172.17.74.204]
+         hostName, err := PublicIP()
+         if (err != nil) {
+         	log.Fatalf("No ip to host server on: %v", err)
+         }
+
          portNum := "6000"
          service := hostName + ":" + portNum
 
@@ -53,6 +68,7 @@ package main
          defer ln.Close()
          fmt.Println("UDP server up and listening on " + udpAddr.String())
 
+         // NOTE: server doesn't stop on EOF at the moment
          for {
                 // wait for UDP client to connect
                 handleUDPConnection(ln)
