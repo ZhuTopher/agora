@@ -15,9 +15,10 @@ package main
          buffer := make([]byte, 8192)
 
          n, addr, err := conn.ReadFromUDP(buffer)
+         msg := string(buffer[:n])
 
          fmt.Println("UDP client : ", addr)
-         fmt.Println("Received from UDP client :  ", string(buffer[:n]))
+         fmt.Println("Received from UDP client :  ", msg)
 
          if err != nil {
                 log.Fatal(err)
@@ -28,9 +29,8 @@ package main
          //        write udp : write: destination address required if you use Write() function instead of WriteToUDP()
 
          // write message back to client
-         message := []byte("Hello UDP client!")
-         _, err = conn.WriteToUDP(message, addr)
-
+         outPacket := []byte(fmt.Sprintf("Server received: %s", msg))
+         _, err = conn.WriteToUDP(outPacket, addr)
          if err != nil {
                 log.Println(err)
          }

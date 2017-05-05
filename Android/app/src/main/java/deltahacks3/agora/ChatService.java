@@ -59,7 +59,7 @@ public class ChatService extends Service {
                 @Override
                 public void run() {
                     try {
-                        UDPsocket = new DatagramSocket(SERVER_PORT, InetAddress.getByName(SERVER_IPv6_ADDR));
+                        UDPsocket = new DatagramSocket(SERVER_PORT);
                         byte[] buffer = new byte[8192];
                         DatagramPacket incoming = new DatagramPacket(buffer, buffer.length);
 
@@ -97,7 +97,7 @@ public class ChatService extends Service {
         // EventBus.getDefault().post(new ChatActivity.EventReceiveMessage(sendMessage.chatMsg));
             try {
                 if (this.UDPsocket == null) {
-                    this.UDPsocket = new DatagramSocket(SERVER_PORT, InetAddress.getByName(SERVER_IPv6_ADDR));
+                    this.UDPsocket = new DatagramSocket();
                 }
                 byte[] bytes = sendMessage.chatMsg.msg.getBytes();
                 DatagramPacket packet = new DatagramPacket(bytes, bytes.length,
