@@ -198,9 +198,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     {
         this.polygonWrapperList = new ArrayList<PolygonWrapper>();
 
-        try {
+        // TODO: dynamically choose region to draw
+        // TODO: fetch polygons for limited radius around location
+        //       - server API request
 
-            InputStream is = getAssets().open("workfile.txt");
+        try {
+            InputStream is = getAssets().open("workfile_kw.txt");
 
             BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
