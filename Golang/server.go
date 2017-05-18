@@ -1,80 +1,96 @@
 package main
 
- import (
+import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
-	"os"
- )
+    "sync"
+)
 
- func handleUDPConnection(conn *net.UDPConn) {
+// Server takes TCP clients from main and moves them into the
+//    respective Community (chat room) according to the chat room id 
+type Server struct {
+    // public fields
+    ID          string     // corresponds to area (i.e: Waterloo)
+    Comms       map[string]*Community
 
-         // here is where you want to do stuff like read or write to client
-
-         buffer := make([]byte, 8192)
-
-         n, addr, err := conn.ReadFromUDP(buffer)
-         msg := string(buffer[:n])
-
-         fmt.Println("UDP client : ", addr)
-         fmt.Println("Received from UDP client :  ", msg)
-
-         if err != nil {
-                log.Fatal(err)
-         }
-
-         // NOTE : Need to specify client address in WriteToUDP() function
-         //        otherwise, you will get this error message
-         //        write udp : write: destination address required if you use Write() function instead of WriteToUDP()
-
-         // write message back to client
-         outPacket := []byte(fmt.Sprintf("Server received: %s", msg))
-         _, err = conn.WriteToUDP(outPacket, addr)
-         if err != nil {
-                log.Println(err)
-         }
-
- }
-
- // Return the deployed service application's PUBLIC_IP
-func PublicIP() (string, error) {
-	host := os.Getenv("PUBLIC_IP")
-	if host == "" {
-		return "", errors.New("Missing/empty public ip")
-	}
-	return host, nil
+    // private fields
+    swCAChan    chan *ClientAction
+    caChan      chan *ClientAction
+    running     bool
+    done        chan bool
+    loopWG      sync.WaitGroup
 }
 
- func main() {
-         hostName, err := PublicIP()
-         if (err != nil) {
-         	log.Fatalf("No ip to host server on: %v", err)
-         }
+const (
+    ROOT_COMM_ID = "root"
+)
 
-         portNum := "6000"
-         service := hostName + ":" + portNum
+func NewServer(id string) (s *Server, err error) {
+    s = new(Server)
 
-         udpAddr, err := net.ResolveUDPAddr("udp4", service)
-         if err != nil {
-                log.Fatal(err)
-         }
+    s.ID = id;
+    s.caChan = make(chan *ClientAction)
 
-         // setup listener for incoming UDP connection
-         ln, err := net.ListenUDP("udp", udpAddr)
-         if err != nil {
-                log.Fatal(err)
-         }
-         defer ln.Close()
-         fmt.Println("UDP server up and listening on " + udpAddr.String())
+    s.Comms = make(map[string]*Community)
+    s.Comms[ROOT_COMM_ID] = NewComm(ROOT_COMM_ID)
 
-         // NOTE: server doesn't stop on EOF at the moment
-         for {
-                // wait for UDP client to connect
-                handleUDPConnection(ln)
-         }
+    s.done = make(chan bool)
 
-        /*go func(serviceAddr string){
-        }(service)*/
-        //select{}
- }
+    if err = s.Start(); err != nil {
+        return nil, err
+    }
+    return
+}
+
+func (s *Server) Start() (err error) {
+    if s.running {
+        return errors.New(fmt.Sprintf(
+            "Server %s already running.", s.ID))
+    }
+
+    s.loopWG.Add(1)
+    go s.controlLoop()
+
+    s.running = true
+    return
+}
+
+func (s *Server) Shutdown() (err error) {
+    if !s.running { // TODO: atmomic boolean
+        return errors.New(fmt.Sprintf(
+            "Server %s already stopped.", s.ID))
+    }
+    s.running = false
+
+    // stop server loops from processing
+    close(s.done) // sends on channel to all receivers
+    s.loopWG.Wait()
+
+    // close all client connections in s.Comms
+    var wg sync.WaitGroup
+    for _, comm := range s.Comms {
+        wg.Add(1)
+        go func(wg sync.WaitGroup, comm *Community) {
+            defer wg.Done()
+            comm.Shutdown()
+        }(wg, comm)
+    }
+    wg.Wait()
+
+    return
+}
+
+func (s *Server) controlLoop() {
+    defer s.loopWG.Done()
+
+    for {
+        select {
+        case <-s.done:
+            log.Printf("Server %s exiting control loop.\n", s.ID)
+            break;
+        }
+    }
+
+    // deferred s.loopWG.Done() called
+}
