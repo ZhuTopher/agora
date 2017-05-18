@@ -56,6 +56,7 @@ func (s *Server) Start() (err error) {
     return
 }
 
+// Will disconnect all Clients in s.Comms
 func (s *Server) Shutdown() (err error) {
     if !s.running { // TODO: atmomic boolean
         return errors.New(fmt.Sprintf(

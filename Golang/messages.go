@@ -28,19 +28,18 @@ type MsgClientText struct {
 	//       in order to perform word checks, etc.
 }
 
-// Returns the numeric value identifying the message type
-func MessageType(msg Message) uint8 {
+func (msg Message) TypeToString() string {
 	switch msg.Type {
 	case MTypeClientAuth:
-		return MTypeClientAuth
+		return "MTypeClientAuth"
 	case MTypeClientID:
-		return MTypeClientID
+		return "MTypeClientID"
 	case MTypeClientName:
-		return MTypeClientName
+		return "MTypeClientName"
 	case MTypeClientText:
-		return MTypeClientText
+		return "MTypeClientText"
 	}
-	panic("MessageType(): unknown Message type.")
+	panic("TypeToString(): unknown Message type.")
 }
 
 // WRITING

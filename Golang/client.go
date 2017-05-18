@@ -38,6 +38,9 @@ type Client struct {
 
 	conn 		net.Conn
 	connReader	*bufio.Reader
+
+	authComplete		chan bool
+	disconnected	bool
 }
 
 // will close conn if err != nil
@@ -52,6 +55,9 @@ func NewClient(connPtr *net.Conn) (c *Client, err error) {
 	c = new(Client)
 	c.conn = *connPtr
 	c.connReader = bufio.NewReader(c.conn)
+	c.disconnected = false
+
+	c.authComplete = make(chan bool)
 
 	if err = c.requestAuth(); err != nil {
 		return nil, err
@@ -63,11 +69,18 @@ func NewClient(connPtr *net.Conn) (c *Client, err error) {
 	}
 	c.ServerID = sID
 
+	go c.readLoop()
+
 	return
 }
 
 func (c *Client) Disconnect() {
 	// TODO: atomic boolean
+	if c.disconnected {
+		log.Printf("Client %s (%v) already disconnected.\n", c.Name, c.ID)
+		return
+	}
+	c.disconnected = true
 	log.Printf("Disconnecting %s (id: %v)\n", c.Name, c.ID)
 	c.conn.Close() // ignoring errors
 }
@@ -77,7 +90,10 @@ func (c *Client) Disconnect() {
 func (c *Client) requestAuth() (err error) {
 	defer log.Println("Client.requestAuth() success.")
 
-	// TODO: c.WriteMsg(MsgClientAuth)
+	/* TODO:
+	c.WriteMsg(MsgClientAuth)
+	<-c.authComplete // close once auth has completed
+	*/
 
 	// TODO: c.ID := c.ReadMsg() // MsgClientID
 	c.ID = NextClientID()
@@ -87,7 +103,29 @@ func (c *Client) requestAuth() (err error) {
 	return
 }
 
-func (c *Client) ReadMsg() (msg *Message, err error) {
+// TODO: if 
+func (c *Client) readLoop() {
+	for {
+		msg, err := c.readMsg()
+		if err != nil {
+			log.Printf("Failed to read message for Client %s (%v).\n", c.Name, c.ID)
+			// if err == io.EOF {
+				c.Disconnect()
+				break
+			// } else {
+		}
+
+		log.Printf("Read message of type %s from Client %s (%v).\n",
+			msg.TypeToString(), c.Name, c.ID)
+
+		// TODO: c.handleMsg(msg)
+		// ... close(c.authComplete) // indicate auth has completed
+	}
+
+	log.Printf("Exiting readLoop for Client %s (%v).\n", c.Name, c.ID)
+}
+
+func (c *Client) readMsg() (msg *Message, err error) {
 	var (
 		msgType 	uint8
 		msgLen 		uint32

@@ -5,7 +5,6 @@ import (
     "log"
     "net"
     "sync"
-    "time"
 )
 
 // ServerWrapper houses the acceptLoop which takes TCP connections
@@ -35,11 +34,10 @@ func (sw *ServerWrapper) Shutdown() (err error) {
     sw.running = false
     log.Println("Shutting down Servers (ServerWrapper.Shutdown()")
 
-    // stop accepting TCP connections
-    /*defer*/ sw.tcpl.Close()
-
-    // stop server loops from processing
-    close(sw.done) // sends on channel to all receivers
+    // signal server loops to stop processing
+    close(sw.done) // all receivers read the zero value (false)
+    sw.tcpl.Close() // stop accepting TCP connections
+    close(sw.connChan) // stop building TCP Clients
     sw.loopWG.Wait()
 
     // close all client connections in s.Comms
@@ -65,23 +63,29 @@ func (sw *ServerWrapper) acceptLoop() {
     defer func() {
         log.Println("ServerWrapper exiting acceptLoop()")
         sw.loopWG.Done()
+        log.Println("acceptLoop() -> sw.LoopWG.Done()")
     }()
 
+AcceptLoop:
     for {
         conn, err := sw.tcpl.Accept()
+        // TODO: check if err is "use of closed connection" -> break
         if err != nil {
             log.Printf("Unable to accept TCP connection: %v\n", err)
         }
+        if conn == nil { // tcpl was closed
+            break AcceptLoop
+        }
 
         select {
-        case <-sw.done: 
+        case <-sw.done:
             conn.Close() // ignoring errors
-            break // exit for-loop
+            break AcceptLoop // exit for-loop
         case sw.connChan <- &conn: // send conn to client builder
-        case <-time.After(time.Millisecond*10000):
+        /*case <-time.After(time.Millisecond*10000):
             log.Println(`ServerWrapper timed out trying to send
                 conn to clientBuilderLoop; closing conn`)
-            conn.Close() // ignoring errors
+            conn.Close() // ignoring errors*/
         }
     }
 
@@ -93,9 +97,15 @@ func (sw *ServerWrapper) clientBuilderLoop() {
     defer func() {
         log.Println("ServerWrapper exiting clientBuilderLoop()")
         sw.loopWG.Done()
+        log.Println("clientBuilderLoop() -> sw.LoopWG.Done()")
     }()
 
+CBLoop:
     for connPtr := range sw.connChan {
+        if (connPtr == nil) {
+            break CBLoop // sw.connChan was closed
+        }
+
         c, err := NewClient(connPtr)
         if err != nil {
             log.Printf(
@@ -105,7 +115,8 @@ func (sw *ServerWrapper) clientBuilderLoop() {
         }
 
         select {
-        case <-sw.done: 
+        case <-sw.done:
+            c.Disconnect() 
             break // exit for-loop
         case sw.caChan <- &ClientAction{
                 ClientID:   (*c).ID,
@@ -123,12 +134,14 @@ func (sw *ServerWrapper) controlLoop() {
     defer func() {
         log.Println("ServerWrapper exiting controlLoop()")
         sw.loopWG.Done()
+        log.Println("controlLoop() -> sw.LoopWG.Done()")
     }()
 
+ControlLoop:
     for {
     	select {
     	case <-sw.done:
-            break // exit for-loop
+            break ControlLoop
     	case caPtr := <-sw.caChan:
     		sw.handleCA(caPtr)
     	}

@@ -15,7 +15,7 @@ func NewComm(id string) (comm *Community) {
 	return
 }
 
-
+// Will disconnect all Clients in this Community
 func (comm *Community) Shutdown() {
 	// TODO: atomic boolean
 }

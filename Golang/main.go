@@ -7,6 +7,7 @@ import (
     "log"
     "net"
     "os"
+    "strings"
 )
 
 // OS Env variable fetching functions
@@ -110,7 +111,7 @@ func main() {
             if err != nil {
                 return // io.EOF
             }
-            if (text == "q") {
+            if (strings.Compare(text, "q\n")) == 0 {
                 stdinChan <- text
             }
         }
