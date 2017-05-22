@@ -1,26 +1,26 @@
-# FROM: https://blog.golang.org/docker
+# source: https://blog.golang.org/docker
 
 # Start from a Debian image with the latest version of Go installed
 # and a workspace (GOPATH) configured at /go.
-#FROM golang
+FROM golang
 
-#RUN mkdir -p /go/src/github.com/agora/chat_server
+RUN mkdir -p /go/src/github.com/agora/chat_server
 
 # Copy the local package files to the container's workspace.
-#ADD . /go/src/github.com/agora/chat_server
+ADD ./Golang/src/chat_server /go/src/github.com/agora/chat_server
 
 # Build the compiled chat_server command inside the container.
 # (You may fetch or manage dependencies here,
 # either manually or with a tool like "godep".)
-#RUN go get -v -d
-#RUN go install
+RUN go get -v -d
+RUN go install
 
 # Run the outyet command by default when the container starts.
-#ENTRYPOINT /go/bin/chat_server
+ENTRYPOINT /go/bin/chat_server
 
 # ***************************************************************************
 # Shortcut which automatically copies the package source, fetches the application dependencies, builds the program, and configures it to run on startup
-FROM golang:onbuild
+#FROM golang:onbuild
 
 # Environment Variables
 ENV HOST_IP="" 
