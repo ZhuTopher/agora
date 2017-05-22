@@ -11,8 +11,6 @@ import (
 	"sync"
 )
 
-// TODO: Disconnect() clients after c.conn.Read -> io.EOF (or timeout)
-
 // Global Client UserID value
 const INVALID_CLIENT_USERID = 0 // id 0 is invalid
 var CLIENT_USERID_MUTEX sync.Mutex
@@ -35,11 +33,17 @@ type Client struct {
 	ID			uint32 // TODO: use user deviceID hash instead
 	Name		string // FB first name
 	ServerID	string // region name
+	CommID		string // current neighbourhood
 
 	conn 		net.Conn
 	connReader	*bufio.Reader
 
-	authComplete		chan bool
+	authComplete	chan bool
+
+	serverCAChan	chan *ClientAction
+	commCAChan 		chan *ClientAction
+	caChanRWMutex	sync.RWMutex
+
 	disconnected	bool
 }
 
@@ -58,6 +62,8 @@ func NewClient(connPtr *net.Conn) (c *Client, err error) {
 	c.disconnected = false
 
 	c.authComplete = make(chan bool)
+	c.RemoveCAChans()
+	
 
 	if err = c.requestAuth(); err != nil {
 		return nil, err
@@ -74,17 +80,45 @@ func NewClient(connPtr *net.Conn) (c *Client, err error) {
 	return
 }
 
+func (c *Client) ToString() string {
+	return fmt.Sprintf("Client %s (%v)", c.Name, c.ID)
+}
+
+func (c *Client) RemoveCAChans() {
+	// TODO: import "https://github.com/matryer/resync"
+	/*
+	c.removeCAOnce.Do() {
+		c.caChanRWMutex.Lock()
+		c.serverCAChan = nil
+		c.commCAChan = nil
+	}
+	*/
+}
+
+func (c *Client) SetCAChans(sCAChan chan *ClientAction,
+	commCAChan chan *ClientAction) {
+	// TODO: import "https://github.com/matryer/resync"
+	/*
+	c.removeCAOnce.Do() {
+		c.serverCAChan = sCAChan
+		c.commCAChan = commCAChan
+		c.caChanRWMutex.Unlock()
+	}
+	*/
+}
+
 func (c *Client) Disconnect() {
 	// TODO: atomic boolean
 	if c.disconnected {
-		log.Printf("Client %s (%v) already disconnected.\n", c.Name, c.ID)
+		log.Printf("%s already disconnected.\n", c.ToString())
 		return
 	}
 	c.disconnected = true
 	log.Printf("Disconnecting %s (id: %v)\n", c.Name, c.ID)
 	c.conn.Close() // ignoring errors
-}
 
+	// TODO: tell Community/Server/ServerWrapper to remove Client
+}
 
 // Retreives values for c.ID & c.Name from c.conn
 func (c *Client) requestAuth() (err error) {
@@ -103,26 +137,28 @@ func (c *Client) requestAuth() (err error) {
 	return
 }
 
-// TODO: if 
 func (c *Client) readLoop() {
 	for {
 		msg, err := c.readMsg()
 		if err != nil {
-			log.Printf("Failed to read message for Client %s (%v).\n", c.Name, c.ID)
+			log.Printf("Failed to read message for %s.\n", c.ToString())
 			// if err == io.EOF {
 				c.Disconnect()
 				break
 			// } else {
 		}
 
-		log.Printf("Read message of type %s from Client %s (%v).\n",
-			msg.TypeToString(), c.Name, c.ID)
+		log.Printf("Read message of type %s from %s.\n",
+			msg.TypeToString(), c.ToString())
 
 		// TODO: c.handleMsg(msg)
 		// ... close(c.authComplete) // indicate auth has completed
+		// c.caChanRWMutex.RLock()
+		// if msg.IsCA() { c.serverCAChan <- msg.ToCA() }
+		// c.caChanRWMutex.RUnlock()
 	}
 
-	log.Printf("Exiting readLoop for Client %s (%v).\n", c.Name, c.ID)
+	log.Printf("Exiting readLoop for %s.\n", c.ToString())
 }
 
 func (c *Client) readMsg() (msg *Message, err error) {
@@ -155,6 +191,14 @@ func (c *Client) readMsg() (msg *Message, err error) {
 
 	return // msg, err
 }
+
+/*func (c *Client) SendServerCA(caPtr *ClientAction) {
+
+}
+
+func (c *Client) SendCommCA(caPtr *ClientAction) {
+
+}*/
 
 func (c *Client) WriteMsg(msg *Message) (err error) {
 	dataBin, err := msg.ToBinary()

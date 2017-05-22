@@ -45,8 +45,9 @@ func (sw *ServerWrapper) Shutdown() (err error) {
     for _, s := range sw.Servers {
         wg.Add(1)
         go func(wg *sync.WaitGroup, s *Server) {
-            defer (*wg).Done()
+            defer wg.Done()
             s.Shutdown()
+            log.Printf("Successfully shutdown Server %v\n", s.ID)
         }(&wg, s)
     }
     log.Println("Waiting on all Servers to shut down...")
@@ -63,7 +64,6 @@ func (sw *ServerWrapper) acceptLoop() {
     defer func() {
         log.Println("ServerWrapper exiting acceptLoop()")
         sw.loopWG.Done()
-        log.Println("acceptLoop() -> sw.LoopWG.Done()")
     }()
 
 AcceptLoop:
@@ -97,7 +97,6 @@ func (sw *ServerWrapper) clientBuilderLoop() {
     defer func() {
         log.Println("ServerWrapper exiting clientBuilderLoop()")
         sw.loopWG.Done()
-        log.Println("clientBuilderLoop() -> sw.LoopWG.Done()")
     }()
 
 CBLoop:
@@ -134,7 +133,6 @@ func (sw *ServerWrapper) controlLoop() {
     defer func() {
         log.Println("ServerWrapper exiting controlLoop()")
         sw.loopWG.Done()
-        log.Println("controlLoop() -> sw.LoopWG.Done()")
     }()
 
 ControlLoop:

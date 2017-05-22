@@ -15,38 +15,40 @@ type JoinServer struct {
 	ClientPtr	*Client
 }
 
+type JoinComm struct {
+	CommID	string
+	ClientPtr	*Client
+}
+
 // requires caPtr.Action points to a JoinServer
 func (sw *ServerWrapper) CAJoinServer(caPtr *ClientAction) {
 	js := caPtr.Action.(JoinServer)
 	sID := js.ServerID
 	log.Printf("(sw) Moving Client %v (%v) to Server %v\n",
-		(*js.ClientPtr).Name, (*js.ClientPtr).ID, sID)
+		js.ClientPtr.Name, js.ClientPtr.ID, sID)
 
-	/*if !sw.Servers.has(sID) {
-		sw.Servers[sID] = NewServer(sID)
+	toServer, ok := sw.Servers[sID]
+	if !ok {
+		toServer = NewServer(sID)
+		sw.Servers[sID] = toServer
 	}
 
-	cID := (*js.ClientPtr).ID
-	err := sw.Servers[sID].removeClient(cID)
-	if err != nil {
-		log.Printf("WARNING")
+	cPtr := js.ClientPtr
+	cServerID := cPtr.ServerID
+	if fromServer, ok := sw.Servers[cServerID]; ok {
+		fromServer.RemoveClient(cPtr) // ignore errors
 	}
 
-	sw.Servers[sID].caChan <- caPtr
-	*/
+	toServer.caChan <- caPtr
 }
 
 // requires caPtr.Action points to a JoinServer
 func (s *Server) CAJoinServer(caPtr *ClientAction) {
 	js := caPtr.Action.(JoinServer)
-	sID := js.ServerID
-	log.Printf("(s) Moving Client %v (%v) to Server %v\n",
-		js.ClientPtr.Name, js.ClientPtr.ID, sID)
+	cPtr := js.ClientPtr
 
-	/*if sw.Servers[sID] == nil {
-		sw.Servers[sID] = NewServer(sID)
+	if err := s.AddClientToRootComm(cPtr); err != nil {
+		log.Printf("Unable to add %s to Server %s:\n%v\n",
+			cPtr.ToString(), s.ID, err)
 	}
-
-	sw.Servers[sID].caChan <- caPtr
-	*/
 }
